@@ -1,0 +1,110 @@
+
+import zipfile
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from IPython.display import display, HTML
+
+# 📁 Step 1: Extract Outer ZIP
+outer_zip_path = r"C:\Users\ahire\Downloads\bank+marketing.zip"
+outer_extract_path = "outer_extracted"
+
+if not os.path.exists(outer_extract_path):
+    with zipfile.ZipFile(outer_zip_path, 'r') as outer_zip:
+        outer_zip.extractall(outer_extract_path)
+
+# 📁 Step 2: Extract Inner ZIP
+inner_zip_path = os.path.join(outer_extract_path, "bank-additional.zip")
+inner_extract_path = "inner_extracted"
+
+if not os.path.exists(inner_extract_path):
+    with zipfile.ZipFile(inner_zip_path, 'r') as inner_zip:
+        inner_zip.extractall(inner_extract_path)
+
+# 📄 Step 3: Load CSV
+csv_path = os.path.join(inner_extract_path, "bank-additional", "bank-additional-full.csv")
+df = pd.read_csv(csv_path, sep=';')
+
+# 🧹 Step 4: Preprocessing
+df['y'] = df['y'].map({'yes': 1, 'no': 0})
+df_encoded = pd.get_dummies(df, drop_first=True)
+X = df_encoded.drop('y', axis=1)
+y = df_encoded['y']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 🌳 Step 5: Train Decision Tree
+clf = DecisionTreeClassifier(max_depth=4, random_state=42)
+clf.fit(X_train, y_train)
+
+# 🎨 Step 6: Visualize Decision Tree
+fig = plt.figure(figsize=(24, 12), facecolor='white')
+ax = fig.add_subplot(1, 1, 1)
+plot_tree(
+    clf,
+    filled=True,
+    feature_names=X.columns,
+    class_names=["No", "Yes"],
+    rounded=True,
+    precision=2,
+    fontsize=10,
+    ax=ax
+)
+ax.set_title("Decision Tree: Predicting Customer Subscription", fontsize=16, fontweight='bold', pad=20)
+plt.tight_layout()
+plt.show()
+
+# 🧪 Step 7: Evaluate Model
+y_pred = clf.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
+report = classification_report(y_test, y_pred, target_names=["No", "Yes"])
+
+# 📦 Step 8: Styled Accuracy Box
+acc_box = f"""
+<div style="
+    background-color: #f9f9f9;
+    border: 2px solid #333;
+    padding: 10px 20px;
+    font-size: 16px;
+    display: inline-block;
+    border-radius: 6px;
+    font-family: Consolas, monospace;
+    margin-bottom: 10px;
+">
+<b>✅ Accuracy:</b> {acc:.4f}
+</div>
+"""
+
+# 📄 Step 9: Styled Classification Report
+report_box = f"""
+<div style="
+    border: 2px solid #333;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    white-space: pre;
+    background-color: #fff;
+    margin-top: 15px;
+">
+<pre><b>📄 Classification Report:</b>\n{report}</pre>
+</div>
+"""
+
+# 📊 Step 10: Styled Confusion Matrix Table
+cm_df = pd.DataFrame(
+    cm,
+    index=["Actual: No", "Actual: Yes"],
+    columns=["Predicted: No", "Predicted: Yes"]
+)
+
+cm_table_style = cm_df.style.set_table_styles(
+    [{'selector': 'th, td', 'props': [('border', '2px solid black')]}]
+).set_caption("📊 Confusion Matrix")
+
+# ✅ Display Everything Neatly
+display(HTML(acc_box))
+display(cm_table_style)
+display(HTML(report_box))
+
